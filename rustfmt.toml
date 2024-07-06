@@ -1,0 +1,36 @@
+# encoding
+newline_style = "Unix"
+
+# match
+match_block_trailing_comma = true
+
+# shorthand
+use_field_init_shorthand = true
+use_try_shorthand = true
+
+# nightly only features --------------------------------------------------------
+unstable_features = true
+
+# imports
+imports_granularity = "Crate"
+
+# imports
+group_imports = "StdExternalCrate"
+
+# condense
+condense_wildcard_suffixes = true
+overflow_delimited_expr = true
+
+# sorting
+reorder_impl_items = true
+
+# literal
+format_strings = true
+
+# comments
+normalize_comments = true
+wrap_comments = true
+
+# docs
+format_code_in_doc_comments = true
+normalize_doc_attributes = true

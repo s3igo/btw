@@ -1,0 +1,16 @@
+[package]
+name = "btw"
+version = "0.1.0"
+edition = "2021"
+
+[profile.release]
+strip = true
+lto = true
+codegen-units = 1
+
+[dependencies]
+anyhow = "1.0.86"
+reqwest = { version = "0.12.5", features = ["json"] }
+serenity = { version = "0.12.2", features = ["client", "gateway", "rustls_backend", "model"] }
+tokio = { version = "1.38.0", features = ["macros", "rt-multi-thread"] }
+url = "2.5.2"

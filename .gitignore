@@ -1,0 +1,9 @@
+# secrets
+.env
+
+# nix
+.direnv/
+result
+
+# rust
+/target/
