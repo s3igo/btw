@@ -1,4 +1,4 @@
-# By the way
+# btw
 
 Discord bot that notifies Rust projects
 
