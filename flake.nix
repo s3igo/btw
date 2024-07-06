@@ -38,13 +38,18 @@
         src = craneLib.cleanCargoSource ./.;
         buildInputs =
           with pkgs;
-          lib.optional stdenv.isDarwin [
+          lib.optional stdenv.isLinux [
+            openssl
+            pkg-config
+          ]
+          ++ lib.optional stdenv.isDarwin [
             libiconv
             darwin.apple_sdk.frameworks.SystemConfiguration
           ];
         commonArgs = {
           inherit src buildInputs;
           strictDeps = true;
+          PKG_CONFIG_PATH = with pkgs; lib.optionalString stdenv.isLinux "${openssl.dev}/lib/pkgconfig";
           # CARGO_TARGET_AARCH64_APPLE_DARWIN_RUSTFLAGS = "-Clink-arg=-fuse-ld=${pkgs.lld}/bin/ld64.lld";
         };
         cargoArtifacts = craneLib.buildDepsOnly commonArgs;
@@ -69,9 +74,9 @@
         };
 
         devShells.default = pkgs.mkShell {
-          nativeBuildInputs = buildInputs;
-          buildInputs =
-            [
+          packages =
+            buildInputs
+            ++ [
               toolchain
               fenix.packages.${system}.default.rustfmt # rustfmt nightly
               self.packages.${system}.neovim
