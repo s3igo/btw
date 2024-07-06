@@ -26,6 +26,8 @@ jobs:
           registry: registry.fly.io
           username: x
           password: ${{ secrets.FLY_API_TOKEN }}
+      - name: Install pkg-config
+        run: sudo apt update && sudo apt install -y pkg-config
       - name: Build image
         run: nix build .#container
       - name: Push image
