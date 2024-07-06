@@ -6,6 +6,8 @@ use serenity::{
 
 use crate::github::check_repo_language;
 
+const CONTENT: &str = "ちなみにRust製";
+
 pub struct Handler;
 
 #[async_trait]
@@ -18,11 +20,12 @@ impl EventHandler for Handler {
     async fn message(&self, ctx: Context, msg: Message) {
         for embed in &msg.embeds {
             if let Some(url) = embed.url.as_ref() {
-                if let Err(e) = check_repo_language(url).await {
-                    eprintln!("{e:#}");
-                } else {
-                    let _ = msg.reply(ctx, "ちなみにRust製").await;
-                    return;
+                match check_repo_language(url).await {
+                    Err(e) => eprintln!("{e:#}"),
+                    Ok(_) => {
+                        let _ = msg.reply(ctx, CONTENT).await;
+                        return;
+                    },
                 }
             }
         }
