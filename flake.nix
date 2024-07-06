@@ -13,7 +13,7 @@
         nixpkgs.follows = "nixpkgs";
       };
     };
-    neovim.url = "github:s3igo/dotfiles?dir=neovim";
+    neovim-builder.url = "github:s3igo/dotfiles?dir=neovim";
   };
 
   outputs =
@@ -23,11 +23,12 @@
       flake-utils,
       fenix,
       crane,
-      neovim,
+      neovim-builder,
     }:
     flake-utils.lib.eachDefaultSystem (
       system:
       let
+        name = "btw";
         pkgs = import nixpkgs { inherit system; };
         toolchain =
           with fenix.packages.${system};
@@ -54,17 +55,22 @@
         cargoArtifacts = craneLib.buildDepsOnly commonArgs;
       in
       {
-        packages = {
-          neovim = neovim.withModules {
+        packages = rec {
+          neovim = neovim-builder.withModules {
             inherit system pkgs;
-            modules = with neovim.modules; [
+            modules = with neovim-builder.modules; [
               im-select
               nix
               rust
             ];
           };
-
           default = craneLib.buildPackage (commonArgs // { inherit cargoArtifacts; });
+          container = pkgs.dockerTools.buildImage {
+            inherit name;
+            tag = "latest";
+            copyToRoot = default;
+            config.Cmd = [ "${default}/bin/${name}" ];
+          };
         };
 
         devShells.default = pkgs.mkShell {
