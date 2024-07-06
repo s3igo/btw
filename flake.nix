@@ -43,7 +43,8 @@
         src = craneLib.cleanCargoSource ./.;
         buildInputs =
           with pkgs;
-          lib.optional stdenv.isDarwin [
+          lib.optional stdenv.isLinux [ pkg-config ]
+          ++ lib.optional stdenv.isDarwin [
             libiconv
             darwin.apple_sdk.frameworks.SystemConfiguration
           ];
