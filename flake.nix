@@ -30,15 +30,10 @@
       let
         name = "btw";
         pkgs = import nixpkgs { inherit system; };
-        toolchain =
-          with fenix.packages.${system};
-          combine [
-            (fromToolchainFile {
-              file = ./rust-toolchain.toml;
-              sha256 = "sha256-Ngiz76YP4HTY75GGdH2P+APE/DEIx2R/Dn+BwwOyzZU=";
-            })
-            default.rustfmt # rustfmt nightly
-          ];
+        toolchain = fenix.packages.${system}.fromToolchainFile {
+          file = ./rust-toolchain.toml;
+          sha256 = "sha256-Ngiz76YP4HTY75GGdH2P+APE/DEIx2R/Dn+BwwOyzZU=";
+        };
         craneLib = (crane.mkLib pkgs).overrideToolchain toolchain;
         src = craneLib.cleanCargoSource ./.;
         buildInputs =
@@ -78,6 +73,7 @@
           buildInputs =
             [
               toolchain
+              fenix.packages.${system}.default.rustfmt # rustfmt nightly
               self.packages.${system}.neovim
             ]
             ++ (with pkgs; [
