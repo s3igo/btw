@@ -20,19 +20,14 @@ jobs:
           github_access_token: ${{ secrets.GITHUB_TOKEN }}
       - name: Setup flyctl
         uses: superfly/flyctl-actions/setup-flyctl@master
-      - name: Login to registry.fly.io
-        uses: docker/login-action@v3
-        with:
-          registry: registry.fly.io
-          username: x
-          password: ${{ secrets.FLY_API_TOKEN }}
       - name: Build image
         run: nix build .#container
       - name: Push image
         run: |
           SRC_PATH=$(readlink ./result)
-          nix run nixpkgs#skopeo -- copy --debug \
+          nix run nixpkgs#skopeo --inputs-from . -- copy --debug \
             --format v2s2 \
+            --dest-creds x:${{ secrets.FLY_API_TOKEN }} \
             docker-archive:"$SRC_PATH" \
             docker://registry.fly.io/btw:latest
       - name: Deploy

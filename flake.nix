@@ -8,10 +8,7 @@
     };
     crane = {
       url = "github:ipetkov/crane";
-      inputs = {
-        flake-utils.follows = "flake-utils";
-        nixpkgs.follows = "nixpkgs";
-      };
+      inputs.nixpkgs.follows = "nixpkgs";
     };
     neovim-builder.url = "github:s3igo/dotfiles?dir=neovim";
   };
@@ -36,19 +33,30 @@
         };
         craneLib = (crane.mkLib pkgs).overrideToolchain toolchain;
         src = craneLib.cleanCargoSource ./.;
-        buildInputs =
+        nativeBuildInputs =
           with pkgs;
-          lib.optional stdenv.isLinux [
+          lib.optionals stdenv.isLinux [
             openssl
             pkg-config
-          ]
-          ++ lib.optional stdenv.isDarwin [
+          ];
+        buildInputs =
+          with pkgs;
+          lib.optionals stdenv.isDarwin [
             libiconv
             darwin.apple_sdk.frameworks.SystemConfiguration
           ];
+        shellHook =
+          with pkgs;
+          lib.optionalString stdenv.isLinux ''
+            export OPENSSL_DIR=${openssl.dev};
+            export PKG_CONFIG_PATH=${pkgs.openssl.dev}/lib/pkgconfig
+          '';
         commonArgs = {
-          inherit src buildInputs;
+          inherit src buildInputs nativeBuildInputs;
           strictDeps = true;
+          OPENSSL_DIR = with pkgs; lib.optionalString stdenv.isLinux openssl.dev;
+          # OPENSSL_INCLUDE_DIR = with pkgs; lib.optionalString stdenv.isLinux "${openssl.dev}/include";
+          # OPENSSL_LIBS = with pkgs; lib.optionalString stdenv.isLinux "${openssl.dev}/lib";
           PKG_CONFIG_PATH = with pkgs; lib.optionalString stdenv.isLinux "${openssl.dev}/lib/pkgconfig";
           # CARGO_TARGET_AARCH64_APPLE_DARWIN_RUSTFLAGS = "-Clink-arg=-fuse-ld=${pkgs.lld}/bin/ld64.lld";
         };
@@ -74,8 +82,10 @@
         };
 
         devShells.default = pkgs.mkShell {
+          inherit shellHook;
           packages =
             buildInputs
+            ++ nativeBuildInputs
             ++ [
               toolchain
               fenix.packages.${system}.default.rustfmt # rustfmt nightly
