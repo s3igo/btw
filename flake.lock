@@ -24,7 +24,7 @@
       "inputs": {
         "flake-utils": "flake-utils_2",
         "nixpkgs": [
-          "neovim",
+          "neovim-builder",
           "nixvim",
           "nixpkgs"
         ]
@@ -97,7 +97,7 @@
     "flake-parts": {
       "inputs": {
         "nixpkgs-lib": [
-          "neovim",
+          "neovim-builder",
           "nixvim",
           "nixpkgs"
         ]
@@ -157,12 +157,12 @@
         "flake-compat": "flake-compat_2",
         "gitignore": "gitignore",
         "nixpkgs": [
-          "neovim",
+          "neovim-builder",
           "nixvim",
           "nixpkgs"
         ],
         "nixpkgs-stable": [
-          "neovim",
+          "neovim-builder",
           "nixvim",
           "nixpkgs"
         ]
@@ -184,7 +184,7 @@
     "gitignore": {
       "inputs": {
         "nixpkgs": [
-          "neovim",
+          "neovim-builder",
           "nixvim",
           "git-hooks",
           "nixpkgs"
@@ -207,7 +207,7 @@
     "home-manager": {
       "inputs": {
         "nixpkgs": [
-          "neovim",
+          "neovim-builder",
           "nixvim",
           "nixpkgs"
         ]
@@ -226,17 +226,17 @@
         "type": "github"
       }
     },
-    "neovim": {
+    "neovim-builder": {
       "inputs": {
         "nixvim": "nixvim"
       },
       "locked": {
         "dir": "neovim",
-        "lastModified": 1719952243,
-        "narHash": "sha256-Ivbbj3pYSdgdI/JLaftykjkOQ04CHetkXB8HHVy/EdE=",
+        "lastModified": 1720271709,
+        "narHash": "sha256-8ZBA6pghpUs7wnrkXMwsVF48XEk2hwmurnmx35GxXWg=",
         "owner": "s3igo",
         "repo": "dotfiles",
-        "rev": "5e1c16f31f84f08b961db2da721de016a308860e",
+        "rev": "5a6f0a62c5105a1a00727e502ea03cf8088d4229",
         "type": "github"
       },
       "original": {
@@ -249,7 +249,7 @@
     "nix-darwin": {
       "inputs": {
         "nixpkgs": [
-          "neovim",
+          "neovim-builder",
           "nixvim",
           "nixpkgs"
         ]
@@ -330,7 +330,7 @@
         "crane": "crane",
         "fenix": "fenix",
         "flake-utils": "flake-utils",
-        "neovim": "neovim",
+        "neovim-builder": "neovim-builder",
         "nixpkgs": "nixpkgs_2"
       }
     },
@@ -384,7 +384,7 @@
     "treefmt-nix": {
       "inputs": {
         "nixpkgs": [
-          "neovim",
+          "neovim-builder",
           "nixvim",
           "nixpkgs"
         ]
