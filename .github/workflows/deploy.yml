@@ -23,12 +23,11 @@ jobs:
       - name: Build image
         run: nix build .#container
       - name: Push image
-        run: |
-          SRC_PATH=$(readlink ./result)
-          nix run nixpkgs#skopeo --inputs-from . -- copy --debug \
-            --format v2s2 \
-            --dest-creds x:${{ secrets.FLY_API_TOKEN }} \
-            docker-archive:"$SRC_PATH" \
+        run: >
+          nix run nixpkgs#skopeo --inputs-from . -- copy --debug
+            --format v2s2
+            --dest-creds x:${{ secrets.FLY_API_TOKEN }}
+            docker-archive:"$(readlink ./result)"
             docker://registry.fly.io/btw:latest
       - name: Deploy
         run: flyctl deploy --image registry.fly.io/btw:latest --remote-only

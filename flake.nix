@@ -45,20 +45,12 @@
             libiconv
             darwin.apple_sdk.frameworks.SystemConfiguration
           ];
-        shellHook =
-          with pkgs;
-          lib.optionalString stdenv.isLinux ''
-            export OPENSSL_DIR=${openssl.dev};
-            export PKG_CONFIG_PATH=${pkgs.openssl.dev}/lib/pkgconfig
-          '';
         commonArgs = {
           inherit src buildInputs nativeBuildInputs;
-          strictDeps = true;
-          OPENSSL_DIR = with pkgs; lib.optionalString stdenv.isLinux openssl.dev;
-          # OPENSSL_INCLUDE_DIR = with pkgs; lib.optionalString stdenv.isLinux "${openssl.dev}/include";
-          # OPENSSL_LIBS = with pkgs; lib.optionalString stdenv.isLinux "${openssl.dev}/lib";
-          PKG_CONFIG_PATH = with pkgs; lib.optionalString stdenv.isLinux "${openssl.dev}/lib/pkgconfig";
-          # CARGO_TARGET_AARCH64_APPLE_DARWIN_RUSTFLAGS = "-Clink-arg=-fuse-ld=${pkgs.lld}/bin/ld64.lld";
+          # NOTE: `strictDeps = true` causes build failure
+          # strictDeps = true;
+          # OPENSSL_DIR = with pkgs; lib.optionalString stdenv.isLinux openssl.dev;
+          # PKG_CONFIG_PATH = with pkgs; lib.optionalString stdenv.isLinux "${openssl.dev}/lib/pkgconfig";
         };
         cargoArtifacts = craneLib.buildDepsOnly commonArgs;
       in
@@ -82,7 +74,6 @@
         };
 
         devShells.default = pkgs.mkShell {
-          inherit shellHook;
           packages =
             buildInputs
             ++ nativeBuildInputs
