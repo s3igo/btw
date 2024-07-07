@@ -25,7 +25,6 @@
     flake-utils.lib.eachDefaultSystem (
       system:
       let
-        name = "btw";
         pkgs = import nixpkgs { inherit system; };
         toolchain = fenix.packages.${system}.fromToolchainFile {
           file = ./rust-toolchain.toml;
@@ -33,12 +32,6 @@
         };
         craneLib = (crane.mkLib pkgs).overrideToolchain toolchain;
         src = craneLib.cleanCargoSource ./.;
-        nativeBuildInputs =
-          with pkgs;
-          lib.optionals stdenv.isLinux [
-            openssl
-            pkg-config
-          ];
         buildInputs =
           with pkgs;
           lib.optionals stdenv.isDarwin [
@@ -46,11 +39,8 @@
             darwin.apple_sdk.frameworks.SystemConfiguration
           ];
         commonArgs = {
-          inherit src buildInputs nativeBuildInputs;
-          # NOTE: `strictDeps = true` causes build failure
-          # strictDeps = true;
-          # OPENSSL_DIR = with pkgs; lib.optionalString stdenv.isLinux openssl.dev;
-          # PKG_CONFIG_PATH = with pkgs; lib.optionalString stdenv.isLinux "${openssl.dev}/lib/pkgconfig";
+          inherit src buildInputs;
+          strictDeps = true;
         };
         cargoArtifacts = craneLib.buildDepsOnly commonArgs;
       in
@@ -65,18 +55,17 @@
             ];
           };
           default = craneLib.buildPackage (commonArgs // { inherit cargoArtifacts; });
-          container = pkgs.dockerTools.buildImage {
-            inherit name;
+          container = pkgs.dockerTools.buildImage rec {
+            name = "btw";
             tag = "latest";
-            copyToRoot = default;
-            config.Cmd = [ "${default}/bin/${name}" ];
+            copyToRoot = [ default ];
+            config.Cmd = [ "/bin/${name}" ];
           };
         };
 
         devShells.default = pkgs.mkShell {
           packages =
             buildInputs
-            ++ nativeBuildInputs
             ++ [
               toolchain
               fenix.packages.${system}.default.rustfmt # rustfmt nightly
