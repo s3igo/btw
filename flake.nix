@@ -1,81 +1,100 @@
 {
   inputs = {
-    nixpkgs.url = "github:nixos/nixpkgs/nixpkgs-unstable";
-    flake-utils.url = "github:numtide/flake-utils";
+    nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
+    systems.url = "github:nix-systems/default";
+    flake-parts = {
+      url = "github:hercules-ci/flake-parts";
+      inputs.nixpkgs-lib.follows = "nixpkgs";
+    };
     fenix = {
       url = "github:nix-community/fenix";
       inputs.nixpkgs.follows = "nixpkgs";
     };
-    crane = {
-      url = "github:ipetkov/crane";
-      inputs.nixpkgs.follows = "nixpkgs";
+    crane.url = "github:ipetkov/crane";
+    advisory-db = {
+      url = "github:rustsec/advisory-db";
+      flake = false;
     };
-    neovim-builder.url = "github:s3igo/dotfiles?dir=neovim";
   };
 
   outputs =
-    {
-      self,
-      nixpkgs,
-      flake-utils,
-      fenix,
-      crane,
-      neovim-builder,
-    }:
-    flake-utils.lib.eachDefaultSystem (
-      system:
-      let
-        pkgs = import nixpkgs { inherit system; };
-        toolchain = fenix.packages.${system}.fromToolchainFile {
-          file = ./rust-toolchain.toml;
-          sha256 = "sha256-Ngiz76YP4HTY75GGdH2P+APE/DEIx2R/Dn+BwwOyzZU=";
-        };
-        craneLib = (crane.mkLib pkgs).overrideToolchain toolchain;
-        src = craneLib.cleanCargoSource ./.;
-        buildInputs =
-          with pkgs;
-          lib.optionals stdenv.isDarwin [
-            libiconv
-            darwin.apple_sdk.frameworks.SystemConfiguration
-          ];
-        commonArgs = {
-          inherit src buildInputs;
-          strictDeps = true;
-        };
-        cargoArtifacts = craneLib.buildDepsOnly commonArgs;
-      in
-      {
-        packages = rec {
-          neovim = neovim-builder.withModules {
-            inherit system pkgs;
-            modules = with neovim-builder.modules; [
-              im-select
-              nix
-              rust
+    inputs:
+    inputs.flake-parts.lib.mkFlake { inherit inputs; } {
+      imports = [ inputs.flake-parts.flakeModules.easyOverlay ];
+
+      systems = import inputs.systems;
+
+      perSystem =
+        {
+          pkgs,
+          inputs',
+          self',
+          ...
+        }:
+
+        let
+          toolchain =
+            with inputs'.fenix.packages;
+            combine [
+              (fromToolchainFile {
+                file = ./rust-toolchain.toml;
+                sha256 = "sha256-s1RPtyvDGJaX/BisLT+ifVfuhDT1nZkZ1NcK8sbwELM=";
+              })
+              default.rustfmt # rustfmt nightly
+            ];
+          craneLib = (inputs.crane.mkLib pkgs).overrideToolchain toolchain;
+          src = craneLib.cleanCargoSource ./.;
+          buildInputs =
+            with pkgs;
+            lib.optionals stdenv.isDarwin [
+              libiconv
+              darwin.apple_sdk.frameworks.SystemConfiguration
+            ];
+          commonArgs = {
+            inherit src buildInputs;
+            strictDeps = true;
+          };
+          commonArgs' = commonArgs // {
+            cargoArtifacts = craneLib.buildDepsOnly commonArgs;
+          };
+        in
+
+        {
+          packages = {
+            btw = craneLib.buildPackage commonArgs';
+            container = pkgs.dockerTools.buildImage rec {
+              name = "btw";
+              tag = "latest";
+              copyToRoot = [ self'.packages.btw ];
+              config.Cmd = [ "/bin/${name}" ];
+            };
+            default = self'.packages.btw;
+          };
+
+          checks = {
+            btw-build = craneLib.buildPackage (commonArgs' // { doCheck = false; });
+            btw-clippy = craneLib.cargoClippy commonArgs';
+            btw-fmt = craneLib.cargoFmt { inherit src; };
+            btw-nextest = craneLib.cargoNextest commonArgs';
+            btw-audit = craneLib.cargoAudit {
+              inherit src;
+              inherit (inputs) advisory-db;
+            };
+          };
+
+          devShells.default = pkgs.mkShell {
+            inherit buildInputs;
+            packages = [
+              toolchain
+              pkgs.cargo-nextest
+              pkgs.cargo-watch
+              pkgs.flyctl
             ];
           };
-          default = craneLib.buildPackage (commonArgs // { inherit cargoArtifacts; });
-          container = pkgs.dockerTools.buildImage rec {
-            name = "btw";
-            tag = "latest";
-            copyToRoot = [ default ];
-            config.Cmd = [ "/bin/${name}" ];
+
+          overlayAttrs = {
+            inherit (self'.packages) btw;
           };
         };
-
-        devShells.default = pkgs.mkShell {
-          packages =
-            buildInputs
-            ++ [
-              toolchain
-              fenix.packages.${system}.default.rustfmt # rustfmt nightly
-              self.packages.${system}.neovim
-            ]
-            ++ (with pkgs; [
-              flyctl
-              cargo-watch
-            ]);
-        };
-      }
-    );
+    };
 }
