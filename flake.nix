@@ -90,6 +90,9 @@
               pkgs.cargo-watch
               pkgs.flyctl
             ];
+            shellHook = ''
+              export RUST_BACKTRACE=1
+            '';
           };
 
           overlayAttrs = {
