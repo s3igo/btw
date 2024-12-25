@@ -15,6 +15,6 @@ codegen-units = 1
 [dependencies]
 anyhow = "1.0.95"
 reqwest = { version = "0.12.9", features = ["json", "rustls-tls"], default-features = false }
-serenity = { version = "0.12.4", features = ["client", "gateway", "rustls_backend", "model"] }
+serenity = { version = "0.12.4", features = ["chrono", "client", "gateway", "model", "rustls_backend"], default-features = false }
 tokio = { version = "1.42.0", features = ["macros", "rt-multi-thread"] }
 url = "2.5.4"
