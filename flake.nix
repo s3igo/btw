@@ -73,7 +73,9 @@
 
           checks = {
             btw-build = craneLib.buildPackage (commonArgs' // { doCheck = false; });
-            btw-clippy = craneLib.cargoClippy commonArgs';
+            btw-clippy = craneLib.cargoClippy (
+              commonArgs' // { cargoClippyExtraArgs = "--all-targets -- -D warnings"; }
+            );
             btw-fmt = craneLib.cargoFmt { inherit src; };
             btw-nextest = craneLib.cargoNextest commonArgs';
             btw-audit = craneLib.cargoAudit {

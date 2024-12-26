@@ -20,7 +20,7 @@ fn parse_url(url: &str) -> Result<(String, String)> {
     Ok((owner.to_string(), repo.to_string()))
 }
 
-pub(crate) async fn check_repo_language(url: &str) -> Result<()> {
+pub async fn check_repo_language(url: &str) -> Result<()> {
     let (owner, repo) = parse_url(url)?;
 
     let languages = fetch::repo_languages(&owner, &repo).await?;

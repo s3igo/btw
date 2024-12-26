@@ -20,12 +20,11 @@ impl EventHandler for Handler {
     async fn message(&self, ctx: Context, msg: Message) {
         for embed in &msg.embeds {
             if let Some(url) = embed.url.as_ref() {
-                match check_repo_language(url).await {
-                    Err(e) => eprintln!("{e:#}"),
-                    Ok(_) => {
-                        let _ = msg.reply(ctx, CONTENT).await;
-                        return;
-                    },
+                if let Err(e) = check_repo_language(url).await {
+                    eprintln!("{e:#}");
+                } else {
+                    let _ = msg.reply(ctx, CONTENT).await;
+                    return;
                 }
             }
         }
