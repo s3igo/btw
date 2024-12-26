@@ -29,6 +29,7 @@
       perSystem =
         {
           pkgs,
+          lib,
           inputs',
           self',
           ...
@@ -59,16 +60,17 @@
           commonArgs' = commonArgs // {
             cargoArtifacts = craneLib.buildDepsOnly commonArgs;
           };
+          inherit (lib.importTOML ./Cargo.toml) package;
         in
 
         {
           packages = {
             btw = craneLib.buildPackage commonArgs';
-            container = pkgs.dockerTools.buildImage rec {
-              name = "btw";
-              tag = "latest";
+            container = pkgs.dockerTools.buildImage {
+              inherit (package) name;
+              tag = package.version;
               copyToRoot = [ self'.packages.btw ];
-              config.Cmd = [ "/bin/${name}" ];
+              config.Cmd = [ "/bin/${package.name}" ];
             };
             default = self'.packages.btw;
           };
