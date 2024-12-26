@@ -1,5 +1,5 @@
 # btw
 
-Discord bot that notifies Rust projects
+A Discord bot that notices Rust projects in chat
 
-This is also written in Rust.
+Built with Rust, for Rust 🦀
