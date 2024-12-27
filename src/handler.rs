@@ -2,6 +2,31 @@ const CONTENT: &str = "ちなみにRust製";
 
 pub struct Handler;
 
+impl Handler {
+    async fn inner(
+        &self,
+        ctx: serenity::client::Context,
+        msg: serenity::model::channel::Message,
+    ) -> anyhow::Result<()> {
+        use anyhow::Context as _;
+
+        for embed in &msg.embeds {
+            if let Some(url) = embed.url.as_ref() {
+                let url = crate::url::Url::new(url)?;
+                if url.is_rust_project().await? {
+                    msg.reply(&ctx, CONTENT)
+                        .await
+                        .context("Failed to reply to message")?;
+
+                    println!("Replied to message with content: {CONTENT}");
+                }
+            }
+        }
+
+        Ok(())
+    }
+}
+
 #[serenity::async_trait]
 impl serenity::client::EventHandler for Handler {
     async fn message(
@@ -9,18 +34,8 @@ impl serenity::client::EventHandler for Handler {
         ctx: serenity::client::Context,
         msg: serenity::model::channel::Message,
     ) {
-        dbg!(&msg);
-        for embed in &msg.embeds {
-            if let Some(url) = embed.url.as_ref() {
-                if let Err(e) = crate::github::check_repo_language(url).await {
-                    eprintln!("{e:?}");
-                } else if let Err(e) = msg.reply(&ctx, CONTENT).await {
-                    eprintln!("Error sending message: {e:?}");
-                    return;
-                } else {
-                    println!("Replied to message with content: {CONTENT}");
-                }
-            }
+        if let Err(e) = self.inner(ctx, msg).await {
+            eprintln!("Error: {e:?}");
         }
     }
 
