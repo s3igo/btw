@@ -1,35 +1,35 @@
-use std::collections::HashMap;
-
-use anyhow::Result;
-use reqwest::{
-    header::{HeaderMap, HeaderValue, ACCEPT, USER_AGENT},
-    Client,
-};
-
 const GITHUB_ACCEPT_HEADER: &str = "application/vnd.github+json";
 const GITHUB_API_VERSION: &str = "2022-11-28";
 const DISCORD_USER_AGENT: &str = serenity::constants::USER_AGENT;
 
-fn create_headers() -> HeaderMap {
-    let mut h = HeaderMap::new();
-    h.insert(ACCEPT, HeaderValue::from_static(GITHUB_ACCEPT_HEADER));
+fn headers() -> reqwest::header::HeaderMap {
+    use reqwest::header;
+
+    let mut h = header::HeaderMap::new();
+    h.insert(
+        header::ACCEPT,
+        header::HeaderValue::from_static(GITHUB_ACCEPT_HEADER),
+    );
     h.insert(
         "X-GitHub-Api-Version",
-        HeaderValue::from_static(GITHUB_API_VERSION),
+        header::HeaderValue::from_static(GITHUB_API_VERSION),
     );
-    h.insert(USER_AGENT, HeaderValue::from_static(DISCORD_USER_AGENT));
+    h.insert(
+        header::USER_AGENT,
+        header::HeaderValue::from_static(DISCORD_USER_AGENT),
+    );
     h
 }
 
-pub(super) async fn repo_languages(owner: &str, repo: &str) -> Result<HashMap<String, u64>> {
+pub(super) async fn repo_languages(
+    owner: &str,
+    repo: &str,
+) -> anyhow::Result<std::collections::HashMap<String, u64>> {
     let api_url = format!("https://api.github.com/repos/{owner}/{repo}/languages");
 
-    let client = Client::new();
-    let res = client
-        .get(&api_url)
-        .headers(create_headers())
-        .send()
-        .await?;
+    let client = reqwest::Client::new();
+    let res = client.get(&api_url).headers(headers()).send().await?;
+    let map: std::collections::HashMap<String, u64> = res.json().await?;
 
-    Ok(res.json::<HashMap<String, u64>>().await?)
+    Ok(map)
 }
