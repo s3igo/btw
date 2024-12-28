@@ -44,6 +44,8 @@
                 sha256 = "sha256-s1RPtyvDGJaX/BisLT+ifVfuhDT1nZkZ1NcK8sbwELM=";
               })
               default.rustfmt # rustfmt nightly
+              targets.x86_64-unknown-linux-gnu.stable.rust-std
+              targets.x86_64-unknown-linux-musl.stable.rust-std
             ];
           craneLib = (inputs.crane.mkLib pkgs).overrideToolchain toolchain;
           src = craneLib.cleanCargoSource ./.;
@@ -65,6 +67,56 @@
 
         {
           packages = {
+            dynamic = craneLib.buildPackage (
+              commonArgs'
+              // {
+                depsBuildBuild = [ pkgs.pkgsBuildBuild.qemu ];
+                nativeBuildInputs = [ pkgs.pkgsCross.gnu64.stdenv.cc ];
+                CARGO_BUILD_TARGET = "x86_64-unknown-linux-gnu";
+                CARGO_TARGET_X86_64_UNKNOWN_LINUX_GNU_LINKER = "${pkgs.pkgsCross.gnu64.stdenv.cc.targetPrefix}cc";
+                CARGO_TARGET_X86_64_UNKNOWN_LINUX_GNU_RUNNER = "qemu-system-x86_64";
+                # For building cc-rs crate which ring crate depends on
+                # https://docs.rs/cc/latest/cc/#external-configuration-via-environment-variables
+                HOST_CC = "${pkgs.pkgsCross.gnu64.stdenv.cc.nativePrefix}cc";
+                TARGET_CC = "${pkgs.pkgsCross.gnu64.stdenv.cc.targetPrefix}cc";
+                CFLAGS = "-I$C_INCLUDE_PATH";
+                doCheck = pkgs.stdenv.buildPlatform.system == "x86_64-linux";
+              }
+            );
+            dynamic-zig = craneLib.buildPackage (
+              commonArgs'
+              // {
+                depsBuildBuild = [ pkgs.cargo-zigbuild ];
+                nativeBuildInputs = [ pkgs.pkgsCross.gnu64.stdenv.cc ];
+                preBuild = ''
+                  # Cache directory for C compiler
+                  export XDG_CACHE_HOME=$TMPDIR/xdg_cache
+                  mkdir -p $XDG_CACHE_HOME
+                  # Cache directory for cargo-zigbuild
+                  export CARGO_ZIGBUILD_CACHE_DIR=$TMPDIR/cargo-zigbuild-cache
+                  mkdir -p $CARGO_ZIGBUILD_CACHE_DIR
+                '';
+                # https://crane.dev/API.html#optional-attributes-1
+                cargoBuildCommand = "cargo zigbuild --release";
+                CARGO_BUILD_TARGET = "x86_64-unknown-linux-gnu";
+                CARGO_TARGET_X86_64_UNKNOWN_LINUX_GNU_LINKER = "${pkgs.pkgsCross.gnu64.stdenv.cc.targetPrefix}cc";
+                # For building cc-rs crate which ring crate depends on
+                # https://docs.rs/cc/latest/cc/#external-configuration-via-environment-variables
+                CFLAGS = "-I$C_INCLUDE_PATH";
+                doCheck = pkgs.stdenv.buildPlatform.system == "x86_64-linux";
+              }
+            );
+            static = craneLib.buildPackage (
+              commonArgs'
+              // {
+                nativeBuildInputs = [ pkgs.pkgsCross.musl64.stdenv.cc ];
+                CARGO_BUILD_TARGET = "x86_64-unknown-linux-musl";
+                CARGO_BUILD_RUSTFLAGS = "-C target-feature=+crt-static -C link-self-contained=yes";
+                CARGO_TARGET_X86_64_UNKNOWN_LINUX_MUSL_LINKER = "${pkgs.pkgsCross.musl64.stdenv.cc.targetPrefix}cc";
+                CFLAGS = "-I${pkgs.pkgsCross.musl64.musl.dev}/include";
+                doCheck = pkgs.stdenv.buildPlatform.system == "x86_64-linux";
+              }
+            );
             btw = craneLib.buildPackage commonArgs';
             container = pkgs.dockerTools.buildImage {
               inherit (package) name;
