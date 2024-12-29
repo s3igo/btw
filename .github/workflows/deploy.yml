@@ -4,31 +4,44 @@ on:
   push:
     branches:
       - main
+    paths-ignore:
+      - 'README.md'
+      - 'LICENSE'
 
 jobs:
   deploy:
-    name: Deploy app
-    runs-on: ubuntu-22.04
+    name: Deploy
+    runs-on: ubuntu-24.04
     timeout-minutes: 60
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
       - name: Install Nix
-        uses: DeterminateSystems/nix-installer-action@v12
-      - name: Setup cache
-        uses: DeterminateSystems/magic-nix-cache-action@v7
-      - name: Setup flyctl
-        uses: superfly/flyctl-actions/setup-flyctl@master
+        uses: DeterminateSystems/nix-installer-action@v16
+      - name: Enable Nix cache
+        uses: DeterminateSystems/magic-nix-cache-action@v8
       - name: Build image
-        run: nix build .#container
-      - name: Push image
+        run: nix build .#container-glibc
+      - name: Push image to Fly.io registry
         run: |
-          nix run nixpkgs#skopeo --inputs-from . -- copy --debug \
+          VERSION=$(nix eval .#metadata.package.version)
+          # Remove double quotes from `$VERSION` string
+          VERSION=${VERSION//\"/}
+          echo "VERSION=$VERSION" >> $GITHUB_ENV
+          nix run nixpkgs#skopeo --inputs-from . -- \
+            # Enable verbose output
+            --debug \
+            # Don't look for `policy.json` file in local filesystem
+            --insecure-policy \
+            copy \
             --format v2s2 \
-            --dest-creds x:${{ secrets.FLY_API_TOKEN }} \
-            docker-archive:"$(readlink ./result)" \
-            docker://registry.fly.io/btw:latest
-      - name: Deploy image
-        run: flyctl deploy --image registry.fly.io/btw:latest --remote-only
+            --dest-creds x:${{ secrets.FLY_ACCESS_TOKEN }} \
+            docker-archive:result \
+            docker://registry.fly.io/btw:${VERSION}-glibc
+      - name: Deploy image from Fly.io registry
+        run: |
+          nix run nixpkgs#flyctl -- inputs-from . -- deploy \
+            --remote-only \
+            --image registry.fly.io/btw:${{ env.VERSION }}-glibc
         env:
-          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+          FLY_ACCESS_TOKEN: ${{ secrets.FLY_ACCESS_TOKEN }}
