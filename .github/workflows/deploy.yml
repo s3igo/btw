@@ -37,7 +37,7 @@ jobs:
             docker://registry.fly.io/btw:${VERSION}-glibc
       - name: Deploy image from Fly.io registry
         run: |
-          nix run nixpkgs#flyctl -- inputs-from . -- deploy --remote-only \
+          nix run nixpkgs#flyctl --inputs-from . -- deploy --remote-only \
             --image registry.fly.io/btw:${{ env.VERSION }}-glibc
         env:
           FLY_ACCESS_TOKEN: ${{ secrets.FLY_ACCESS_TOKEN }}
