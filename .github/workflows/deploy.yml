@@ -28,16 +28,20 @@ jobs:
           # Remove double quotes from `$VERSION` string
           VERSION=${VERSION//\"/}
           echo "VERSION=$VERSION" >> $GITHUB_ENV
-          # --debug: Enable verbose output
-          # --insecure-policy: Don't look for `policy.json` file in local filesystem
-          nix run nixpkgs#skopeo --inputs-from . -- --debug --insecure-policy copy \
+          nix run nixpkgs#skopeo --inputs-from . -- \
+            # Enable verbose output
+            --debug \
+            # Don't look for `policy.json` file in local filesystem
+            --insecure-policy \
+            copy \
             --format v2s2 \
             --dest-creds x:${{ secrets.FLY_ACCESS_TOKEN }} \
             docker-archive:result \
             docker://registry.fly.io/btw:${VERSION}-glibc
       - name: Deploy image from Fly.io registry
         run: |
-          nix run nixpkgs#flyctl -- inputs-from . -- deploy --remote-only \
+          nix run nixpkgs#flyctl -- inputs-from . -- deploy \
+            --remote-only \
             --image registry.fly.io/btw:${{ env.VERSION }}-glibc
         env:
           FLY_ACCESS_TOKEN: ${{ secrets.FLY_ACCESS_TOKEN }}
