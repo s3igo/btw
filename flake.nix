@@ -49,14 +49,8 @@
             ];
           craneLib = (inputs.crane.mkLib pkgs).overrideToolchain toolchain;
           src = craneLib.cleanCargoSource ./.;
-          buildInputs =
-            with pkgs;
-            lib.optionals stdenv.isDarwin [
-              libiconv
-              darwin.apple_sdk.frameworks.SystemConfiguration
-            ];
           commonArgs = {
-            inherit src buildInputs;
+            inherit src;
             strictDeps = true;
           };
           commonArgs' = commonArgs // {
@@ -164,7 +158,6 @@
           };
 
           devShells.default = pkgs.mkShell {
-            inherit buildInputs;
             packages = [
               toolchain
               pkgs.cargo-nextest
