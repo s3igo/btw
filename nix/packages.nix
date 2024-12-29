@@ -28,15 +28,12 @@ extraArgs:
         btw = craneLib.buildPackage commonArgs'; # Native compilation
 
         # Cross-compile a dynamically linked glibc binary targeting x86_64-linux
-        # using QEMU
         dynamic = craneLib.buildPackage (
           commonArgs'
           // {
-            depsBuildBuild = [ pkgs.pkgsBuildBuild.qemu ];
             nativeBuildInputs = [ pkgs.pkgsCross.gnu64.stdenv.cc ];
             CARGO_BUILD_TARGET = "x86_64-unknown-linux-gnu";
             CARGO_TARGET_X86_64_UNKNOWN_LINUX_GNU_LINKER = "${pkgs.pkgsCross.gnu64.stdenv.cc.targetPrefix}cc";
-            CARGO_TARGET_X86_64_UNKNOWN_LINUX_GNU_RUNNER = "qemu-system-x86_64";
             # For building cc-rs crate which ring crate depends on
             # https://docs.rs/cc/latest/cc/#external-configuration-via-environment-variables
             HOST_CC = "${pkgs.pkgsCross.gnu64.stdenv.cc.nativePrefix}cc";
