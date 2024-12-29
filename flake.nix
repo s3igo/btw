@@ -98,7 +98,8 @@
                 '';
                 # https://crane.dev/API.html#optional-attributes-1
                 cargoBuildCommand = "cargo zigbuild --release";
-                CARGO_BUILD_TARGET = "x86_64-unknown-linux-gnu";
+                # Specify the same glibc version as the distroless image
+                cargoExtraArgs = "--target x86_64-unknown-linux-gnu.2.36";
                 CARGO_TARGET_X86_64_UNKNOWN_LINUX_GNU_LINKER = "${pkgs.pkgsCross.gnu64.stdenv.cc.targetPrefix}cc";
                 # For building cc-rs crate which ring crate depends on
                 # https://docs.rs/cc/latest/cc/#external-configuration-via-environment-variables
@@ -117,13 +118,35 @@
                 doCheck = pkgs.stdenv.buildPlatform.system == "x86_64-linux";
               }
             );
-            btw = craneLib.buildPackage commonArgs';
-            container = pkgs.dockerTools.buildImage {
+            container-dynamic-zig = pkgs.dockerTools.buildImage {
               inherit (package) name;
-              tag = package.version;
-              copyToRoot = [ self'.packages.btw ];
+              tag = "${package.version}-glibc";
+              # nix run nixpkgs#nix-prefetch-docker -- gcr.io/distroless/base-nossl-debian12 nonroot-amd64
+              fromImage = pkgs.dockerTools.pullImage {
+                imageName = "gcr.io/distroless/base-nossl-debian12";
+                imageDigest = "sha256:60437440fc565b42782cd72ff766a287d05b819182763d5d08a090010de407c3";
+                hash = "sha256-Nhxw7t1MisF/PyUdGAouRsMEqyOHO+pLNtoKZuu6yCM=";
+                finalImageName = "gcr.io/distroless/base-nossl-debian12";
+                finalImageTag = "nonroot-amd64";
+              };
+              copyToRoot = [ self'.packages.dynamic-zig ];
               config.Cmd = [ "/bin/${package.name}" ];
             };
+            container-static = pkgs.dockerTools.buildImage {
+              inherit (package) name;
+              tag = "${package.version}-musl";
+              # nix run nixpkgs#nix-prefetch-docker -- gcr.io/distroless/static-debian12 nonroot-amd64
+              fromImage = pkgs.dockerTools.pullImage {
+                imageName = "gcr.io/distroless/static-debian12";
+                imageDigest = "sha256:668a3f0546348876f7f7f6a3a5531b1150553fbf73d5f18e4c2768b3b4346052";
+                hash = "sha256-Q5Yq2K8WtRnIBSHqCw715qp2qAMDB9W7AnKYWKp3jKc=";
+                finalImageName = "gcr.io/distroless/static-debian12";
+                finalImageTag = "nonroot-amd64";
+              };
+              copyToRoot = [ self'.packages.static ];
+              config.Cmd = [ "/bin/${package.name}" ];
+            };
+            btw = craneLib.buildPackage commonArgs'; # Native compilation
             default = self'.packages.btw;
           };
 
