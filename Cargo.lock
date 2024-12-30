@@ -117,6 +117,7 @@ name = "btw"
 version = "0.1.2"
 dependencies = [
  "anyhow",
+ "futures",
  "reqwest 0.12.11",
  "serenity",
  "tokio",

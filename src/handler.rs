@@ -4,23 +4,43 @@ pub struct Handler;
 
 impl Handler {
     async fn inner(
-        &self,
         ctx: serenity::client::Context,
         msg: serenity::model::channel::Message,
     ) -> anyhow::Result<()> {
         use anyhow::Context as _;
+        use futures::StreamExt as _;
 
-        for embed in &msg.embeds {
-            if let Some(url) = embed.url.as_ref() {
-                let url = crate::url::Url::new(url)?;
-                if url.is_rust_project().await? {
-                    msg.reply(&ctx, CONTENT)
-                        .await
-                        .context("Failed to reply to message")?;
+        let urls: Vec<_> = msg
+            .embeds
+            .iter()
+            .filter_map(|embed| embed.url.as_ref())
+            .map(|url| crate::url::Url::new(url))
+            .collect();
+        let client = reqwest::Client::new();
 
-                    println!("Replied to message with content: {CONTENT}");
+        let stream = futures::stream::iter(urls).map(|url| {
+            let client = client.clone();
+            async move { url?.is_rust_project(client).await }
+        });
+
+        let results: Vec<_> = stream.buffer_unordered(5).collect().await;
+
+        let has_rust_project_url = results
+            .into_iter()
+            .inspect(|result| {
+                if let Err(e) = result {
+                    eprintln!("{e:?}");
                 }
-            }
+            })
+            .filter_map(Result::ok)
+            .any(std::convert::identity);
+
+        if has_rust_project_url {
+            msg.reply(&ctx, CONTENT)
+                .await
+                .context("Failed to reply to message")?;
+
+            println!("Replied to message with content: {CONTENT}");
         }
 
         Ok(())
@@ -52,7 +72,7 @@ impl serenity::client::EventHandler for Handler {
         event: serenity::model::event::MessageUpdateEvent,
     ) {
         if let Ok(msg) = get_message(&ctx, &event.channel_id, &event.id).await {
-            if let Err(e) = self.inner(ctx, msg).await {
+            if let Err(e) = Self::inner(ctx, msg).await {
                 eprintln!("Error: {e:?}");
             }
         }

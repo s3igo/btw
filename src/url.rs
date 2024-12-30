@@ -33,7 +33,7 @@ impl Url {
         Ok(Self { owner, repo })
     }
 
-    pub async fn is_rust_project(&self) -> anyhow::Result<bool> {
+    pub async fn is_rust_project(&self, client: reqwest::Client) -> anyhow::Result<bool> {
         use std::collections::HashMap;
 
         use anyhow::Context as _;
@@ -43,7 +43,6 @@ impl Url {
             self.owner, self.repo
         );
 
-        let client = reqwest::Client::new();
         let res = client
             .get(&api_url)
             .header(reqwest::header::ACCEPT, "application/vnd.github+json")
