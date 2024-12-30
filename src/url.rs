@@ -33,17 +33,32 @@ impl Url {
         Ok(Self { owner, repo })
     }
 
-    pub async fn is_rust_project(&self) -> anyhow::Result<bool> {
-        use std::collections::HashMap;
+    pub async fn is_rust_project(&self, client: reqwest::Client) -> anyhow::Result<bool> {
+        use std::{collections::HashMap, sync::LazyLock};
 
         use anyhow::Context as _;
+        use moka::future::Cache;
+
+        static LANGUAGES_CACHE: LazyLock<Cache<String, bool>> = LazyLock::new(|| {
+            use std::time::Duration;
+
+            Cache::builder()
+                .time_to_idle(Duration::from_secs(7 * 24 * 60 * 60)) // 1 week
+                .max_capacity(1_000)
+                .build()
+        });
+
+        let cache_key = format!("{}/{}", self.owner, self.repo);
+
+        if let Some(is_rust) = LANGUAGES_CACHE.get(&cache_key).await {
+            return Ok(is_rust);
+        }
 
         let api_url = format!(
             "https://api.github.com/repos/{}/{}/languages",
             self.owner, self.repo
         );
 
-        let client = reqwest::Client::new();
         let res = client
             .get(&api_url)
             .header(reqwest::header::ACCEPT, "application/vnd.github+json")
@@ -63,7 +78,10 @@ impl Url {
             .max_by_key(|(_, &v)| v)
             .with_context(|| format!("Repository languages data is empty: {languages:?}"))?;
 
-        Ok(primary_lang == "Rust")
+        let is_rust = primary_lang == "Rust";
+        LANGUAGES_CACHE.insert(cache_key, is_rust).await;
+
+        Ok(is_rust)
     }
 }
 
