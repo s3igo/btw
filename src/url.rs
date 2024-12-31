@@ -1,3 +1,6 @@
+const CACHE_TTI: std::time::Duration = std::time::Duration::from_secs(7 * 24 * 60 * 60); // 1 week
+const CACHE_CAPACITY: u64 = 1_000;
+
 #[derive(Debug)]
 pub struct Url {
     owner: String,
@@ -42,19 +45,20 @@ impl Url {
         use moka::future::Cache;
 
         static LANGUAGES_CACHE: LazyLock<Cache<String, bool>> = LazyLock::new(|| {
-            use std::time::Duration;
-
             Cache::builder()
-                .time_to_idle(Duration::from_secs(7 * 24 * 60 * 60)) // 1 week
-                .max_capacity(1_000)
+                .time_to_idle(CACHE_TTI)
+                .max_capacity(CACHE_CAPACITY)
                 .build()
         });
 
         let cache_key = format!("{}/{}", self.owner, self.repo);
 
         if let Some(is_rust) = LANGUAGES_CACHE.get(&cache_key).await {
+            tracing::info!("Cache hit for {cache_key}: is_rust = {is_rust}");
             return Ok(is_rust);
         }
+
+        tracing::info!("Cache miss for {cache_key}");
 
         let api_url = format!(
             "https://api.github.com/repos/{}/{}/languages",
@@ -81,6 +85,7 @@ impl Url {
             .with_context(|| format!("Repository languages data is empty: {languages:?}"))?;
 
         let is_rust = primary_lang == "Rust";
+        tracing::info!("Inserting into cache: {cache_key} = {is_rust}");
         LANGUAGES_CACHE.insert(cache_key, is_rust).await;
 
         Ok(is_rust)
