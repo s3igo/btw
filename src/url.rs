@@ -5,6 +5,7 @@ pub struct Url {
 }
 
 impl Url {
+    #[tracing::instrument(ret, err)]
     pub fn new(url: &str) -> anyhow::Result<Self> {
         use anyhow::Context as _;
 
@@ -33,6 +34,7 @@ impl Url {
         Ok(Self { owner, repo })
     }
 
+    #[tracing::instrument(skip(client), ret, err(level = tracing::Level::WARN))]
     pub async fn is_rust_project(&self, client: reqwest::Client) -> anyhow::Result<bool> {
         use std::{collections::HashMap, sync::LazyLock};
 

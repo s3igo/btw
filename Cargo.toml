@@ -23,4 +23,6 @@ moka = { version = "0.12.8", features = ["future"] }
 reqwest = { version = "0.12.11", features = ["json", "rustls-tls"] }
 serenity = { version = "0.12.4", features = ["chrono", "client", "gateway", "model", "rustls_backend"], default-features = false }
 tokio = { version = "1.42.0", features = ["macros", "parking_lot", "rt-multi-thread"] }
+tracing = "0.1.40"
+tracing-subscriber = { version = "0.3.18", features = ["env-filter", "json", "parking_lot"] }
 url = "2.5.4"
