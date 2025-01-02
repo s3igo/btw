@@ -19,10 +19,10 @@ nursery = { level = "warn", priority = -1 }
 [dependencies]
 anyhow = "1.0.95"
 futures = "0.3.31"
-moka = { version = "0.12.8", features = ["future"] }
-reqwest = { version = "0.12.11", features = ["charset", "http2", "json", "rustls-tls"], default-features = false }
+moka = { version = "0.12.9", features = ["future"] }
+reqwest = { version = "0.12.12", features = ["charset", "http2", "json", "rustls-tls"], default-features = false }
 serenity = { version = "0.12.4", features = ["chrono", "client", "gateway", "model", "rustls_backend"], default-features = false }
 tokio = { version = "1.42.0", features = ["macros", "parking_lot", "rt-multi-thread"] }
-tracing = "0.1.40"
-tracing-subscriber = { version = "0.3.18", features = ["env-filter", "json", "parking_lot"] }
+tracing = "0.1.41"
+tracing-subscriber = { version = "0.3.19", features = ["env-filter", "json", "parking_lot"] }
 url = "2.5.4"
