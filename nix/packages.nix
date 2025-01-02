@@ -48,11 +48,15 @@ extraArgs:
         dynamic-zig = craneLib.buildPackage (
           commonArgs'
           // {
-            depsBuildBuild = [ pkgs.cargo-zigbuild ];
+            # Explicitly use the latest Zig version (v0.13.0) which works fine
+            # as a cargo-zigbuild dependency on non-Windows platforms
+            # https://github.com/rust-cross/cargo-zigbuild/pull/256
+            # https://github.com/rust-cross/cargo-zigbuild/pull/274
+            depsBuildBuild = [ (pkgs.cargo-zigbuild.override { inherit (pkgs) zig; }) ];
             nativeBuildInputs = [ pkgs.pkgsCross.gnu64.stdenv.cc ];
             preBuild = ''
               # Cache directory for C compiler
-              export XDG_CACHE_HOME=$TMPDIR/xdg_cache
+              export XDG_CACHE_HOME=$TMPDIR/xdg-cache
               mkdir -p $XDG_CACHE_HOME
               # Cache directory for cargo-zigbuild
               export CARGO_ZIGBUILD_CACHE_DIR=$TMPDIR/cargo-zigbuild-cache
