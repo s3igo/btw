@@ -3,7 +3,7 @@ extraArgs:
 { config, ... }:
 
 let
-  inherit (config.flake.metadata) package;
+  inherit (config.flake.meta.cargo) package;
 in
 
 {

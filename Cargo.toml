@@ -9,7 +9,6 @@ debug = "line-tables-only"
 [profile.release]
 strip = true
 lto = true
-panic = "abort"
 codegen-units = 1
 
 [lints.clippy]

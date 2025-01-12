@@ -25,6 +25,8 @@ extraArgs:
 
     {
       packages = {
+        _deps = commonArgs'.cargoArtifacts;
+
         btw = craneLib.buildPackage commonArgs'; # Native compilation
 
         # Cross-compile a dynamically linked glibc binary targeting x86_64-linux
@@ -65,7 +67,7 @@ extraArgs:
             # Specify the same glibc version as the distroless image
             # https://crane.dev/API.html#optional-attributes-1
             # https://github.com/rust-cross/cargo-zigbuild?tab=readme-ov-file#specify-glibc-version
-            cargoBuildCommand = "cargo zigbuild --release --target x86_64-unknown-linux-gnu.2.36";
+            cargoBuildCommand = "cargo zigbuild --profile release --target x86_64-unknown-linux-gnu.2.36";
             CARGO_TARGET_X86_64_UNKNOWN_LINUX_GNU_LINKER = "${pkgs.pkgsCross.gnu64.stdenv.cc.targetPrefix}cc";
             # For building cc-rs crate which ring crate depends on
             # https://docs.rs/cc/latest/cc/#external-configuration-via-environment-variables

@@ -84,6 +84,6 @@
           };
         };
 
-      flake.metadata = inputs.nixpkgs.lib.importTOML ./Cargo.toml;
+      flake.meta.cargo = inputs.nixpkgs.lib.importTOML ./Cargo.toml;
     };
 }

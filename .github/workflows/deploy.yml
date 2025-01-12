@@ -24,9 +24,7 @@ jobs:
         run: nix build .#container-glibc
       - name: Push image to Fly.io registry
         run: |
-          VERSION=$(nix eval .#metadata.package.version)
-          # Remove double quotes from `$VERSION` string
-          VERSION=${VERSION//\"/}
+          VERSION=$(nix eval .#meta.cargo.package.version --raw)
           echo "VERSION=$VERSION" >> $GITHUB_ENV
           # --debug: Enable verbose output
           # --insecure-policy: Don't look for `policy.json` file in local filesystem
