@@ -15,7 +15,7 @@ in
           inherit (package) name;
           tag = "${package.version}-glibc";
           fromImage = pkgs.dockerTools.pullImage extraArgs.images.base-nossl;
-          copyToRoot = [ self'.packages.dynamic-zig ];
+          copyToRoot = [ self'.packages.dynamic ];
           config.Cmd = [ "/bin/${package.name}" ];
           architecture = "amd64";
         };
