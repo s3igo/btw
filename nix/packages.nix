@@ -6,6 +6,7 @@ extraArgs:
   perSystem =
     {
       pkgs,
+      lib,
       self',
       system,
       ...
@@ -18,70 +19,68 @@ extraArgs:
         inherit src;
         strictDeps = true;
       };
+      cargoArtifacts = craneLib.buildDepsOnly commonArgs;
       commonArgs' = commonArgs // {
-        cargoArtifacts = craneLib.buildDepsOnly commonArgs;
+        inherit cargoArtifacts;
       };
+      crossArgs =
+        args@{
+          target ? "x86_64-unknown-linux-gnu",
+          libcVersion ? null,
+          ...
+        }:
+        let
+          cleanedArgs = builtins.removeAttrs args [
+            "target"
+            "libcVersion"
+          ];
+          # Explicitly use the latest Zig version (v0.13.0) which works fine as
+          # a cargo-zigbuild dependency on non-Windows platforms
+          # https://github.com/rust-cross/cargo-zigbuild/pull/256
+          # https://github.com/rust-cross/cargo-zigbuild/pull/274
+          inherit (pkgs) zig;
+          cargo-zigbuild = pkgs.cargo-zigbuild.override { inherit zig; };
+          # https://github.com/rust-cross/cargo-zigbuild?tab=readme-ov-file#specify-glibc-version
+          targetStr = target + lib.optionalString (builtins.isString libcVersion) ".${libcVersion}";
+        in
+        commonArgs'
+        // cleanedArgs
+        // {
+          inherit (zig) stdenv;
+          depsBuildBuild = [ cargo-zigbuild ];
+          preBuild = ''
+            # Cache directory for C compiler
+            export XDG_CACHE_HOME=$TMPDIR/xdg-cache
+            mkdir -p $XDG_CACHE_HOME
+            # Cache directory for cargo-zigbuild
+            export CARGO_ZIGBUILD_CACHE_DIR=$XDG_CACHE_HOME
+            mkdir -p $CARGO_ZIGBUILD_CACHE_DIR
+          '';
+          # https://crane.dev/API.html#optional-attributes-1
+          cargoBuildCommand = "cargo zigbuild --profile release --target ${targetStr}";
+        };
     in
 
     {
       packages = {
-        btw = craneLib.buildPackage commonArgs'; # Native compilation
+        _deps = cargoArtifacts;
 
-        # Cross-compile a dynamically linked glibc binary targeting x86_64-linux
-        dynamic = craneLib.buildPackage (
-          commonArgs'
-          // {
-            nativeBuildInputs = [ pkgs.pkgsCross.gnu64.stdenv.cc ];
-            CARGO_BUILD_TARGET = "x86_64-unknown-linux-gnu";
-            CARGO_TARGET_X86_64_UNKNOWN_LINUX_GNU_LINKER = "${pkgs.pkgsCross.gnu64.stdenv.cc.targetPrefix}cc";
-            # For building cc-rs crate which ring crate depends on
-            # https://docs.rs/cc/latest/cc/#external-configuration-via-environment-variables
-            HOST_CC = "${pkgs.pkgsCross.gnu64.stdenv.cc.nativePrefix}cc";
-            TARGET_CC = "${pkgs.pkgsCross.gnu64.stdenv.cc.targetPrefix}cc";
-            CFLAGS = "-I$C_INCLUDE_PATH";
-            doCheck = pkgs.stdenv.buildPlatform.system == "x86_64-linux";
-          }
-        );
+        btw = craneLib.buildPackage commonArgs'; # Self-compiling
 
         # Cross-compile a dynamically linked glibc binary targeting x86_64-linux
         # using cargo-zigbuild to match the base image's glibc version
-        dynamic-zig = craneLib.buildPackage (
-          commonArgs'
-          // {
-            depsBuildBuild = [ pkgs.cargo-zigbuild ];
-            nativeBuildInputs = [ pkgs.pkgsCross.gnu64.stdenv.cc ];
-            preBuild = ''
-              # Cache directory for C compiler
-              export XDG_CACHE_HOME=$TMPDIR/xdg_cache
-              mkdir -p $XDG_CACHE_HOME
-              # Cache directory for cargo-zigbuild
-              export CARGO_ZIGBUILD_CACHE_DIR=$TMPDIR/cargo-zigbuild-cache
-              mkdir -p $CARGO_ZIGBUILD_CACHE_DIR
-            '';
-            # Specify the same glibc version as the distroless image
-            # https://crane.dev/API.html#optional-attributes-1
-            # https://github.com/rust-cross/cargo-zigbuild?tab=readme-ov-file#specify-glibc-version
-            cargoBuildCommand = "cargo zigbuild --release --target x86_64-unknown-linux-gnu.2.36";
-            CARGO_TARGET_X86_64_UNKNOWN_LINUX_GNU_LINKER = "${pkgs.pkgsCross.gnu64.stdenv.cc.targetPrefix}cc";
-            # For building cc-rs crate which ring crate depends on
-            # https://docs.rs/cc/latest/cc/#external-configuration-via-environment-variables
-            CFLAGS = "-I$C_INCLUDE_PATH";
-            doCheck = pkgs.stdenv.buildPlatform.system == "x86_64-linux";
-          }
-        );
+        dynamic = craneLib.buildPackage (crossArgs {
+          # Specify the same glibc version as the distroless image
+          libcVersion = "2.36";
+          doCheck = pkgs.stdenv.buildPlatform.system == "x86_64-linux";
+        });
 
         # Cross-compile a statically linked musl binary targeting x86_64-linux
-        static = craneLib.buildPackage (
-          commonArgs'
-          // {
-            nativeBuildInputs = [ pkgs.pkgsCross.musl64.stdenv.cc ];
-            CARGO_BUILD_TARGET = "x86_64-unknown-linux-musl";
-            CARGO_BUILD_RUSTFLAGS = "-C target-feature=+crt-static -C link-self-contained=yes";
-            CARGO_TARGET_X86_64_UNKNOWN_LINUX_MUSL_LINKER = "${pkgs.pkgsCross.musl64.stdenv.cc.targetPrefix}cc";
-            CFLAGS = "-I${pkgs.pkgsCross.musl64.musl.dev}/include";
-            doCheck = pkgs.stdenv.buildPlatform.system == "x86_64-linux";
-          }
-        );
+        static = craneLib.buildPackage (crossArgs {
+          target = "x86_64-unknown-linux-musl";
+          CARGO_BUILD_RUSTFLAGS = "-C target-feature=+crt-static -C link-self-contained=yes";
+          doCheck = pkgs.stdenv.buildPlatform.system == "x86_64-linux";
+        });
 
         default = self'.packages.btw;
       };
@@ -97,12 +96,7 @@ extraArgs:
           inherit src;
           inherit (inputs) advisory-db;
         };
-        inherit (self'.packages)
-          btw
-          dynamic
-          dynamic-zig
-          static
-          ;
+        inherit (self'.packages) btw dynamic static;
       };
     };
 }

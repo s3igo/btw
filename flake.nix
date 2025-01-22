@@ -30,7 +30,7 @@
         combine [
           (fromToolchainFile {
             file = ./rust-toolchain.toml;
-            sha256 = "sha256-s1RPtyvDGJaX/BisLT+ifVfuhDT1nZkZ1NcK8sbwELM=";
+            sha256 = "sha256-lMLAupxng4Fd9F1oDw8gx+qA0RuF7ou7xhNU8wgs0PU=";
           })
           default.rustfmt # rustfmt nightly
           targets.x86_64-unknown-linux-gnu.stable.rust-std
@@ -84,6 +84,6 @@
           };
         };
 
-      flake.metadata = inputs.nixpkgs.lib.importTOML ./Cargo.toml;
+      flake.meta.cargo = inputs.nixpkgs.lib.importTOML ./Cargo.toml;
     };
 }
