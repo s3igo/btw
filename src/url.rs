@@ -81,7 +81,7 @@ impl Url {
 
         let (primary_lang, _) = languages
             .iter()
-            .max_by_key(|(_, &v)| v)
+            .max_by_key(|&(_, &v)| v)
             .with_context(|| format!("Repository languages data is empty: {languages:?}"))?;
 
         let is_rust = primary_lang == "Rust";
