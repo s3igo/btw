@@ -63,7 +63,7 @@
 
     inputs.flake-parts.lib.mkFlake { inherit inputs; } {
       imports = map extraArgs [
-        ./nix/containers.nix
+        ./nix/images.nix
         ./nix/packages.nix
       ];
 

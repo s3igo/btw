@@ -5,8 +5,8 @@ on:
     branches:
       - main
     paths-ignore:
-      - 'README.md'
-      - 'LICENSE'
+      - README.md
+      - LICENSE
 
 jobs:
   deploy:
@@ -14,14 +14,11 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 60
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-      - name: Install Nix
-        uses: DeterminateSystems/nix-installer-action@v16
-      - name: Enable Nix cache
-        uses: DeterminateSystems/magic-nix-cache-action@v8
-      - name: Build image
-        run: nix build .#container-glibc
+      - uses: actions/checkout@v4
+      - uses: DeterminateSystems/nix-installer-action@v16
+      # https://determinate.systems/posts/magic-nix-cache-free-tier-eol/
+      # - uses: DeterminateSystems/magic-nix-cache-action@v8
+      - run: nix build .#image-glibc
       - name: Push image to Fly.io registry
         run: |
           VERSION=$(nix eval .#metadata.cargo.package.version --raw)

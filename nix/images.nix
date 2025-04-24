@@ -11,7 +11,7 @@ in
     { pkgs, self', ... }:
     {
       packages = {
-        container-glibc = pkgs.dockerTools.buildImage {
+        image-glibc = pkgs.dockerTools.buildImage {
           inherit (package) name;
           tag = "${package.version}-glibc";
           fromImage = pkgs.dockerTools.pullImage extraArgs.images.base-nossl;
@@ -20,7 +20,7 @@ in
           architecture = "amd64";
         };
 
-        container-musl = pkgs.dockerTools.buildImage {
+        image-musl = pkgs.dockerTools.buildImage {
           inherit (package) name;
           tag = "${package.version}-musl";
           fromImage = pkgs.dockerTools.pullImage extraArgs.images.static;
@@ -31,7 +31,7 @@ in
       };
 
       checks = {
-        inherit (self'.packages) container-glibc container-musl;
+        inherit (self'.packages) image-glibc image-musl;
       };
     };
 }
