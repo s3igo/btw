@@ -30,7 +30,7 @@
         combine [
           (fromToolchainFile {
             file = ./rust-toolchain.toml;
-            sha256 = "sha256-AJ6LX/Q/Er9kS15bn9iflkUwcgYqRQxiOIL2ToVAXaU=";
+            sha256 = "sha256-X/4ZBHO3iW0fOenQ3foEvscgAPJYl2abspaBThDOukI=";
           })
           default.rustfmt # rustfmt nightly
           targets.x86_64-unknown-linux-gnu.stable.rust-std
