@@ -13,7 +13,7 @@ extraArgs:
     }:
 
     let
-      craneLib = (inputs.crane.mkLib pkgs).overrideToolchain (extraArgs.mkToolchain system);
+      craneLib = (inputs.crane.mkLib pkgs).overrideToolchain extraArgs.toolchainFor.${system};
       src = craneLib.cleanCargoSource extraArgs.src;
       commonArgs = {
         inherit src;
@@ -34,28 +34,14 @@ extraArgs:
             "target"
             "libcVersion"
           ];
-          # Explicitly use the latest Zig version (v0.13.0) which works fine as
-          # a cargo-zigbuild dependency on non-Windows platforms
-          # https://github.com/rust-cross/cargo-zigbuild/pull/256
-          # https://github.com/rust-cross/cargo-zigbuild/pull/274
-          inherit (pkgs) zig;
-          cargo-zigbuild = pkgs.cargo-zigbuild.override { inherit zig; };
           # https://github.com/rust-cross/cargo-zigbuild?tab=readme-ov-file#specify-glibc-version
           targetStr = target + lib.optionalString (builtins.isString libcVersion) ".${libcVersion}";
         in
         commonArgs'
         // cleanedArgs
         // {
-          inherit (zig) stdenv;
-          depsBuildBuild = [ cargo-zigbuild ];
-          preBuild = ''
-            # Cache directory for C compiler
-            export XDG_CACHE_HOME=$TMPDIR/xdg-cache
-            mkdir -p $XDG_CACHE_HOME
-            # Cache directory for cargo-zigbuild
-            export CARGO_ZIGBUILD_CACHE_DIR=$XDG_CACHE_HOME
-            mkdir -p $CARGO_ZIGBUILD_CACHE_DIR
-          '';
+          depsBuildBuild = [ pkgs.cargo-zigbuild ];
+          nativeBuildInputs = [ pkgs.writableTmpDirAsHomeHook ];
           # https://crane.dev/API.html#optional-attributes-1
           cargoBuildCommand = "cargo zigbuild --profile release --target ${targetStr}";
         };
@@ -96,7 +82,7 @@ extraArgs:
           inherit src;
           inherit (inputs) advisory-db;
         };
-        inherit (self'.packages) btw dynamic static;
+        inherit (self'.packages) dynamic static;
       };
     };
 }
