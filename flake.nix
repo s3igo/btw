@@ -78,12 +78,16 @@
               pkgs.cargo-watch
               pkgs.flyctl
             ];
-            shellHook = ''
-              export RUST_BACKTRACE=1
-            '';
+            RUST_BACKTRACE = 1;
           };
         };
 
-      flake.meta.cargo = inputs.nixpkgs.lib.importTOML ./Cargo.toml;
+      flake.metadata = with inputs.nixpkgs.lib; {
+        cargo = importTOML ./Cargo.toml;
+        neovimFeatures = concat [
+          "rust"
+          "yaml"
+        ];
+      };
     };
 }
