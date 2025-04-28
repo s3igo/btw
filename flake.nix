@@ -23,22 +23,22 @@
     inputs:
 
     let
-      toolchainFor = inputs.nixpkgs.lib.genAttrs (import inputs.systems) (
-        system:
-        with inputs.fenix.packages.${system};
-        combine [
-          (fromToolchainFile {
-            file = ./rust-toolchain.toml;
-            sha256 = "sha256-X/4ZBHO3iW0fOenQ3foEvscgAPJYl2abspaBThDOukI=";
-          })
-          default.rustfmt # rustfmt nightly
-          targets.x86_64-unknown-linux-gnu.stable.rust-std
-          targets.x86_64-unknown-linux-musl.stable.rust-std
-        ]
-      );
       extraArgs = {
         __functor = with inputs.nixpkgs.lib; flip modules.importApply;
         src = ./.;
+        toolchainFor = inputs.nixpkgs.lib.genAttrs (import inputs.systems) (
+          system:
+          with inputs.fenix.packages.${system};
+          combine [
+            (fromToolchainFile {
+              file = ./rust-toolchain.toml;
+              sha256 = "sha256-X/4ZBHO3iW0fOenQ3foEvscgAPJYl2abspaBThDOukI=";
+            })
+            default.rustfmt # rustfmt nightly
+            targets.x86_64-unknown-linux-gnu.stable.rust-std
+            targets.x86_64-unknown-linux-musl.stable.rust-std
+          ]
+        );
         images = {
           # nix run nixpkgs#nix-prefetch-docker -- gcr.io/distroless/base-nossl-debian12 nonroot-amd64
           base-nossl = {
@@ -57,7 +57,6 @@
             finalImageTag = "nonroot-amd64";
           };
         };
-        inherit toolchainFor;
       };
     in
 
@@ -68,21 +67,6 @@
       ];
 
       systems = import inputs.systems;
-
-      perSystem =
-        { pkgs, system, ... }:
-        {
-          devShells.default = pkgs.mkShell {
-            packages = [
-              toolchainFor.${system}
-              pkgs.cargo-nextest
-              # https://github.com/ziglang/zig/issues/23273
-              (pkgs.cargo-zigbuild.override { zig = pkgs.zig_0_13; })
-              pkgs.flyctl
-            ];
-            RUST_BACKTRACE = 1;
-          };
-        };
 
       flake.metadata = with inputs.nixpkgs.lib; {
         cargo = importTOML ./Cargo.toml;

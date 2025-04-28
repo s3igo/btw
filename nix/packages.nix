@@ -51,7 +51,7 @@ extraArgs:
       packages = {
         _deps = cargoArtifacts;
 
-        btw = craneLib.buildPackage commonArgs'; # Self-compiling
+        btw = craneLib.buildPackage commonArgs';
 
         # Cross-compile a dynamically linked glibc binary targeting x86_64-linux
         # using cargo-zigbuild to match the base image's glibc version
@@ -83,6 +83,16 @@ extraArgs:
           inherit (inputs) advisory-db;
         };
         inherit (self'.packages) dynamic static;
+      };
+
+      devShells.default = craneLib.devShell {
+        inherit (self') checks;
+        packages = with pkgs; [
+          # https://github.com/ziglang/zig/issues/23273
+          (cargo-zigbuild.override { zig = zig_0_13; })
+          flyctl
+        ];
+        RUST_BACKTRACE = 1;
       };
     };
 }
