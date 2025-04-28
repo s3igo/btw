@@ -1,0 +1,41 @@
+name: Cache
+description: Cache a Nix package
+
+inputs:
+  package:
+    required: true
+    description: Package to cache
+  path:
+    required: false
+    description: Absolute path used for caching
+    default: /tmp/cache
+
+runs:
+  using: composite
+  steps:
+    - name: Set data for subsequent steps
+      id: data
+      run: |
+        STORE_PATH="$(nix eval --raw --apply toString -- ${{ inputs.package }})"
+        echo "store-path=$STORE_PATH" >> $GITHUB_OUTPUT
+      shell: bash
+    - uses: actions/cache@v4
+      id: cache
+      with:
+        path: ${{ inputs.path }}
+        key: ${{ steps.data.outputs.store-path }}
+    - name: 'Cache hit: restore'
+      if: steps.cache.outputs.cache-hit == 'true'
+      run: >
+        nix copy
+        --no-check-sigs
+        --from file://${{ inputs.path }}
+        -- ${{ inputs.package }}
+      shell: bash
+    - name: 'Cache miss: save'
+      if: steps.cache.outputs.cache-hit != 'true'
+      run: >
+        nix copy
+        --to file://${{ inputs.path }}?compression=zstd
+        -- ${{ inputs.package }}
+      shell: bash
