@@ -3,6 +3,8 @@ extraArgs:
 { inputs, ... }:
 
 {
+  imports = map extraArgs [ ./images.nix ];
+
   perSystem =
     {
       pkgs,
