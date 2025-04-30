@@ -36,7 +36,7 @@ runs:
         nix copy
         --no-check-sigs
         --from file://${{ inputs.path }}
-        -- ${{ inputs.package }}
+        -- ${{ steps.data.outputs.store-path }}
       shell: bash
     - name: 'Cache hit: custom command'
       if: steps.cache.outputs.cache-hit == 'true' && inputs.on-cache-hit != ''
