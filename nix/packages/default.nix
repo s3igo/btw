@@ -46,6 +46,8 @@ extraArgs:
           nativeBuildInputs = [ pkgs.writableTmpDirAsHomeHook ];
           # https://crane.dev/API.html#optional-attributes-1
           cargoBuildCommand = "cargo zigbuild --profile release --target ${targetStr}";
+          # Workaround for https://github.com/rust-lang/rust/issues/78210
+          cargoTestCommand = "cargo test --profile release --target ${target}";
         };
     in
 
