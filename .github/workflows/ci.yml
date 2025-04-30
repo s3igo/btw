@@ -1,6 +1,10 @@
-name: Deploy
+name: CI
 
 on:
+  pull_request:
+    paths-ignore:
+      - README.md
+      - LICENSE
   push:
     branches:
       - main
@@ -8,16 +12,71 @@ on:
       - README.md
       - LICENSE
 
+env:
+  NIX_SYSTEM: x86_64-linux
+
 jobs:
-  deploy:
-    name: Deploy
+  generate-matrix:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    outputs:
+      matrix: ${{ steps.define.outputs.matrix }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: cachix/install-nix-action@v31
+      - name: Define matrix
+        id: define
+        run: |
+          MATRIX="$(nix flake show --json \
+            | jq --compact-output '.checks["${{ env.NIX_SYSTEM }}"] | keys')"
+          echo "matrix=$MATRIX" >> $GITHUB_OUTPUT
+
+  pre-checks:
     runs-on: ubuntu-24.04
     timeout-minutes: 60
     steps:
       - uses: actions/checkout@v4
       - uses: cachix/install-nix-action@v31
+      - name: Cache built dependency crates
+        uses: ./.github/actions/cache
         with:
-          github_access_token: ${{ secrets.GITHUB_TOKEN }}
+          package: .#_deps
+
+  checks:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    needs:
+      - generate-matrix
+      - pre-checks
+    strategy:
+      matrix:
+        check: ${{ fromJSON(needs.generate-matrix.outputs.matrix) }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: cachix/install-nix-action@v31
+      - name: Cache built dependency crates
+        uses: ./.github/actions/cache
+        with:
+          package: .#_deps
+      - name: Cache built check
+        uses: ./.github/actions/cache
+        with:
+          package: .#checks.${{ env.NIX_SYSTEM }}.${{ matrix.check }}
+          # While checks are expected to run implicitly during the caching
+          # process, this ensures they are executed explicitly.
+          on-cache-hit: |-
+            nix build .#checks.${{ env.NIX_SYSTEM }}.${{ matrix.check }}
+          on-cache-miss: |-
+            nix build .#checks.${{ env.NIX_SYSTEM }}.${{ matrix.check }}
+
+  deploy:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    needs: checks
+    if: github.ref == 'refs/heads/main'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: cachix/install-nix-action@v31
       - name: Set data for subsequent steps
         id: data
         run: |
