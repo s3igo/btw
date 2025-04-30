@@ -13,6 +13,10 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
     crane.url = "github:ipetkov/crane";
+    treefmt-nix = {
+      url = "github:numtide/treefmt-nix";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
     advisory-db = {
       url = "github:rustsec/advisory-db";
       flake = false;
@@ -61,10 +65,7 @@
     in
 
     inputs.flake-parts.lib.mkFlake { inherit inputs; } {
-      imports = map extraArgs [
-        ./nix/images.nix
-        ./nix/packages.nix
-      ];
+      imports = map extraArgs [ ./nix ];
 
       systems = import inputs.systems;
 

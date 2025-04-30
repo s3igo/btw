@@ -9,6 +9,12 @@ inputs:
     required: false
     description: Absolute path used for caching
     default: /tmp/cache
+  on-cache-hit:
+    required: false
+    description: Command to run when cache hit (after restoration)
+  on-cache-miss:
+    required: false
+    description: Command to run when cache miss (before saving)
 
 runs:
   using: composite
@@ -30,7 +36,15 @@ runs:
         nix copy
         --no-check-sigs
         --from file://${{ inputs.path }}
-        -- ${{ inputs.package }}
+        -- ${{ steps.data.outputs.store-path }}
+      shell: bash
+    - name: 'Cache hit: custom command'
+      if: steps.cache.outputs.cache-hit == 'true' && inputs.on-cache-hit != ''
+      run: ${{ inputs.on-cache-hit }}
+      shell: bash
+    - name: 'Cache miss: custom command'
+      if: steps.cache.outputs.cache-hit != 'true' && inputs.on-cache-miss != ''
+      run: ${{ inputs.on-cache-miss }}
       shell: bash
     - name: 'Cache miss: save'
       if: steps.cache.outputs.cache-hit != 'true'

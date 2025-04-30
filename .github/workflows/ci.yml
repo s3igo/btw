@@ -1,0 +1,112 @@
+name: CI
+
+on:
+  pull_request:
+    paths-ignore:
+      - README.md
+      - LICENSE
+  push:
+    branches:
+      - main
+    paths-ignore:
+      - README.md
+      - LICENSE
+
+env:
+  NIX_SYSTEM: x86_64-linux
+
+jobs:
+  generate-matrix:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    outputs:
+      matrix: ${{ steps.define.outputs.matrix }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: cachix/install-nix-action@v31
+      - name: Define matrix
+        id: define
+        run: |
+          MATRIX="$(nix flake show --json \
+            | jq --compact-output '.checks["${{ env.NIX_SYSTEM }}"] | keys')"
+          echo "matrix=$MATRIX" >> $GITHUB_OUTPUT
+
+  pre-checks:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: cachix/install-nix-action@v31
+      - name: Cache built dependency crates
+        uses: ./.github/actions/cache
+        with:
+          package: .#_deps
+
+  checks:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    needs:
+      - generate-matrix
+      - pre-checks
+    strategy:
+      matrix:
+        check: ${{ fromJSON(needs.generate-matrix.outputs.matrix) }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: cachix/install-nix-action@v31
+      - name: Cache built dependency crates
+        uses: ./.github/actions/cache
+        with:
+          package: .#_deps
+      - name: Cache built check
+        uses: ./.github/actions/cache
+        with:
+          package: .#checks.${{ env.NIX_SYSTEM }}.${{ matrix.check }}
+          # While checks are expected to run implicitly during the caching
+          # process, this ensures they are executed explicitly.
+          on-cache-hit: |-
+            nix build .#checks.${{ env.NIX_SYSTEM }}.${{ matrix.check }}
+          on-cache-miss: |-
+            nix build .#checks.${{ env.NIX_SYSTEM }}.${{ matrix.check }}
+
+  deploy:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    needs: checks
+    if: github.ref == 'refs/heads/main'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: cachix/install-nix-action@v31
+      - name: Set data for subsequent steps
+        id: data
+        run: |
+          VERSION="$(nix eval --raw -- .#metadata.cargo.package.version)"
+          echo "image=registry.fly.io/btw:$VERSION-glibc" >> $GITHUB_OUTPUT
+      - name: Cache built dependency crates
+        uses: ./.github/actions/cache
+        with:
+          package: .#_deps
+      - name: Cache built image
+        uses: ./.github/actions/cache
+        with:
+          package: .#image-glibc
+      - run: nix build .#image-glibc
+      - name: Push image to Fly.io registry
+        # --insecure-policy:
+        #   Don't look for `policy.json` file in local filesystem
+        run: >
+          nix run --inputs-from . nixpkgs#skopeo --
+          --insecure-policy
+          copy
+          --format v2s2
+          --dest-creds x:${{ secrets.FLY_ACCESS_TOKEN }}
+          -- docker-archive:result
+          docker://${{ steps.data.outputs.image }}
+      - name: Deploy image from Fly.io registry
+        run: >
+          nix run --inputs-from . nixpkgs#flyctl --
+          deploy
+          --remote-only
+          --image ${{ steps.data.outputs.image }}
+        env:
+          FLY_ACCESS_TOKEN: ${{ secrets.FLY_ACCESS_TOKEN }}
