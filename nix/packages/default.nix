@@ -55,24 +55,25 @@ extraArgs:
       packages = {
         _deps = cargoArtifacts;
 
-        btw = craneLib.buildPackage commonArgs';
+        btw-native = craneLib.buildPackage commonArgs';
 
         # Cross-compile a dynamically linked glibc binary targeting x86_64-linux
         # using cargo-zigbuild to match the base image's glibc version
-        dynamic = craneLib.buildPackage (crossArgs {
+        btw-glibc = craneLib.buildPackage (crossArgs {
           # Specify the same glibc version as the distroless image
           libcVersion = "2.36";
           doCheck = pkgs.stdenv.buildPlatform.system == "x86_64-linux";
         });
 
         # Cross-compile a statically linked musl binary targeting x86_64-linux
-        static = craneLib.buildPackage (crossArgs {
+        btw-musl = craneLib.buildPackage (crossArgs {
           target = "x86_64-unknown-linux-musl";
           CARGO_BUILD_RUSTFLAGS = "-C target-feature=+crt-static -C link-self-contained=yes";
           doCheck = pkgs.stdenv.buildPlatform.system == "x86_64-linux";
         });
 
-        default = self'.packages.btw;
+        btw = self'.packages.btw-native;
+        default = self'.packages.btw-native;
       };
 
       checks = {
@@ -86,7 +87,6 @@ extraArgs:
           inherit src;
           inherit (inputs) advisory-db;
         };
-        inherit (self'.packages) dynamic static;
       };
 
       devShells.default = craneLib.devShell {

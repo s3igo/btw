@@ -12,27 +12,23 @@ in
 
     {
       packages = {
-        image-glibc = pkgs.dockerTools.buildImage {
+        btw-glibc-image = pkgs.dockerTools.buildImage {
           inherit (package) name;
           tag = "${package.version}-glibc";
           fromImage = pkgs.dockerTools.pullImage extraArgs.images.base-nossl;
-          copyToRoot = [ self'.packages.dynamic ];
+          copyToRoot = [ self'.packages.btw-glibc ];
           config.Cmd = [ "/bin/${package.name}" ];
           architecture = "amd64";
         };
 
-        image-musl = pkgs.dockerTools.buildImage {
+        btw-musl-image = pkgs.dockerTools.buildImage {
           inherit (package) name;
           tag = "${package.version}-musl";
           fromImage = pkgs.dockerTools.pullImage extraArgs.images.static;
-          copyToRoot = [ self'.packages.static ];
+          copyToRoot = [ self'.packages.btw-musl ];
           config.Cmd = [ "/bin/${package.name}" ];
           architecture = "amd64";
         };
-      };
-
-      checks = {
-        inherit (self'.packages) image-glibc image-musl;
       };
     };
 }

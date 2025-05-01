@@ -20,16 +20,22 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 12
     outputs:
-      matrix: ${{ steps.define.outputs.matrix }}
+      checks: ${{ steps.define.outputs.checks }}
+      exes: ${{ steps.define.outputs.exes }}
+      images: ${{ steps.define.outputs.images }}
     steps:
       - uses: actions/checkout@v4
       - uses: cachix/install-nix-action@v31
       - name: Define matrix
         id: define
+        # Due to the requirements of the checks-build-image job, images must be
+        # a subset of exes
         run: |
-          MATRIX="$(nix flake show --json \
+          CHECKS="$(nix flake show --json \
             | jq --compact-output '.checks["${{ env.NIX_SYSTEM }}"] | keys')"
-          echo "matrix=$MATRIX" >> $GITHUB_OUTPUT
+          echo "checks=$CHECKS" >> "$GITHUB_OUTPUT"
+          echo 'exes=["native", "glibc", "musl"]' >> "$GITHUB_OUTPUT"
+          echo 'images=["glibc", "musl"]' >> "$GITHUB_OUTPUT"
 
   pre-checks:
     runs-on: ubuntu-24.04
@@ -37,10 +43,11 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: cachix/install-nix-action@v31
-      - name: Cache built dependency crates
+      - name: Cache built deps
         uses: ./.github/actions/cache
         with:
           package: .#_deps
+          skip-on-cache-hit: 'true'
 
   checks:
     runs-on: ubuntu-24.04
@@ -50,11 +57,11 @@ jobs:
       - pre-checks
     strategy:
       matrix:
-        check: ${{ fromJSON(needs.generate-matrix.outputs.matrix) }}
+        check: ${{ fromJSON(needs.generate-matrix.outputs.checks) }}
     steps:
       - uses: actions/checkout@v4
       - uses: cachix/install-nix-action@v31
-      - name: Cache built dependency crates
+      - name: Cache built deps
         uses: ./.github/actions/cache
         with:
           package: .#_deps
@@ -62,17 +69,58 @@ jobs:
         uses: ./.github/actions/cache
         with:
           package: .#checks.${{ env.NIX_SYSTEM }}.${{ matrix.check }}
-          # While checks are expected to run implicitly during the caching
-          # process, this ensures they are executed explicitly.
-          on-cache-hit: |-
-            nix build .#checks.${{ env.NIX_SYSTEM }}.${{ matrix.check }}
-          on-cache-miss: |-
-            nix build .#checks.${{ env.NIX_SYSTEM }}.${{ matrix.check }}
+          skip-on-cache-hit: 'true'
+
+  checks-build-exe:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    needs:
+      - generate-matrix
+      - pre-checks
+    strategy:
+      matrix:
+        exe: ${{ fromJSON(needs.generate-matrix.outputs.exes) }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: cachix/install-nix-action@v31
+      - name: Cache built deps
+        uses: ./.github/actions/cache
+        with:
+          package: .#_deps
+      - name: Cache built exe
+        uses: ./.github/actions/cache
+        with:
+          package: .#btw-${{ matrix.exe }}
+          skip-on-cache-hit: 'true'
+
+  checks-build-image:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    needs:
+      - generate-matrix
+      - checks-build-exe
+    strategy:
+      matrix:
+        image: ${{ fromJSON(needs.generate-matrix.outputs.images) }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: cachix/install-nix-action@v31
+      - name: Cache built exe
+        uses: ./.github/actions/cache
+        with:
+          package: .#btw-${{ matrix.image }}
+      - name: Cache built image
+        uses: ./.github/actions/cache
+        with:
+          package: .#btw-${{ matrix.image }}-image
+          skip-on-cache-hit: 'true'
 
   deploy:
     runs-on: ubuntu-24.04
     timeout-minutes: 60
-    needs: checks
+    needs:
+      - checks
+      - checks-build-image
     if: github.ref == 'refs/heads/main'
     steps:
       - uses: actions/checkout@v4
@@ -81,16 +129,12 @@ jobs:
         id: data
         run: |
           VERSION="$(nix eval --raw -- .#metadata.cargo.package.version)"
-          echo "image=registry.fly.io/btw:$VERSION-glibc" >> $GITHUB_OUTPUT
-      - name: Cache built dependency crates
-        uses: ./.github/actions/cache
-        with:
-          package: .#_deps
+          echo "image=registry.fly.io/btw:$VERSION-glibc" >> "$GITHUB_OUTPUT"
       - name: Cache built image
         uses: ./.github/actions/cache
         with:
-          package: .#image-glibc
-      - run: nix build .#image-glibc
+          package: .#btw-glibc-image
+      - run: nix build .#btw-glibc-image
       - name: Push image to Fly.io registry
         # --insecure-policy:
         #   Don't look for `policy.json` file in local filesystem

@@ -9,12 +9,26 @@ inputs:
     required: false
     description: Absolute path used for caching
     default: /tmp/cache
-  on-cache-hit:
+  before-cache-hit:
+    required: false
+    description: Command to run when cache hit (before restoration)
+  after-cache-hit:
     required: false
     description: Command to run when cache hit (after restoration)
-  on-cache-miss:
+  before-cache-miss:
     required: false
     description: Command to run when cache miss (before saving)
+  after-cache-miss:
+    required: false
+    description: Command to run when cache miss (after saving)
+  skip-on-cache-hit:
+    required: false
+    description: Whether to skip remaining steps when a cache hit occurs
+    default: 'false'
+  skip-on-cache-miss:
+    required: false
+    description: Whether to skip remaining steps when a cache miss occurs
+    default: 'false'
 
 runs:
   using: composite
@@ -30,26 +44,50 @@ runs:
       with:
         path: ${{ inputs.path }}
         key: ${{ steps.data.outputs.store-path }}
+    - name: 'Cache hit: custom command before restore'
+      if: |
+        steps.cache.outputs.cache-hit == 'true' &&
+        inputs.before-cache-hit != '' &&
+        inputs.skip-on-cache-hit != 'true'
+      run: ${{ inputs.before-cache-hit }}
+      shell: bash
     - name: 'Cache hit: restore'
-      if: steps.cache.outputs.cache-hit == 'true'
+      if: |
+        steps.cache.outputs.cache-hit == 'true' &&
+        inputs.skip-on-cache-hit != 'true'
       run: >
         nix copy
         --no-check-sigs
         --from file://${{ inputs.path }}
         -- ${{ steps.data.outputs.store-path }}
       shell: bash
-    - name: 'Cache hit: custom command'
-      if: steps.cache.outputs.cache-hit == 'true' && inputs.on-cache-hit != ''
-      run: ${{ inputs.on-cache-hit }}
+    - name: 'Cache hit: custom command after restore'
+      if: |
+        steps.cache.outputs.cache-hit == 'true' &&
+        inputs.after-cache-hit != '' &&
+        inputs.skip-on-cache-hit != 'true'
+      run: ${{ inputs.after-cache-hit }}
       shell: bash
-    - name: 'Cache miss: custom command'
-      if: steps.cache.outputs.cache-hit != 'true' && inputs.on-cache-miss != ''
-      run: ${{ inputs.on-cache-miss }}
+    - name: 'Cache miss: custom command before save'
+      if: |
+        steps.cache.outputs.cache-hit != 'true' &&
+        inputs.before-cache-miss != '' &&
+        inputs.skip-on-cache-miss != 'true'
+      run: ${{ inputs.before-cache-miss }}
       shell: bash
     - name: 'Cache miss: save'
-      if: steps.cache.outputs.cache-hit != 'true'
+      if: |
+        steps.cache.outputs.cache-hit != 'true' &&
+        inputs.skip-on-cache-miss != 'true'
       run: >
         nix copy
         --to file://${{ inputs.path }}?compression=zstd
         -- ${{ inputs.package }}
+      shell: bash
+    - name: 'Cache miss: custom command after save'
+      if: |
+        steps.cache.outputs.cache-hit != 'true' &&
+        inputs.after-cache-miss != '' &&
+        inputs.skip-on-cache-miss != 'true'
+      run: ${{ inputs.after-cache-miss }}
       shell: bash
