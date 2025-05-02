@@ -33,9 +33,11 @@ jobs:
         run: |
           CHECKS="$(nix flake show --json \
             | jq --compact-output '.checks["${{ env.NIX_SYSTEM }}"] | keys')"
-          echo "checks=$CHECKS" >> "$GITHUB_OUTPUT"
-          echo 'exes=["native", "glibc", "musl"]' >> "$GITHUB_OUTPUT"
-          echo 'images=["glibc", "musl"]' >> "$GITHUB_OUTPUT"
+          {
+            echo "checks=$CHECKS"
+            echo 'exes=["native", "glibc", "musl"]'
+            echo 'images=["glibc", "musl"]'
+          } >> "$GITHUB_OUTPUT"
 
   pre-checks:
     runs-on: ubuntu-24.04
@@ -47,7 +49,7 @@ jobs:
         uses: ./.github/actions/cache
         with:
           package: .#_deps
-          skip-on-cache-hit: 'true'
+          skip-on-cache-hit: "true"
 
   checks:
     runs-on: ubuntu-24.04
@@ -69,7 +71,7 @@ jobs:
         uses: ./.github/actions/cache
         with:
           package: .#checks.${{ env.NIX_SYSTEM }}.${{ matrix.check }}
-          skip-on-cache-hit: 'true'
+          skip-on-cache-hit: "true"
 
   checks-build-exe:
     runs-on: ubuntu-24.04
@@ -91,7 +93,7 @@ jobs:
         uses: ./.github/actions/cache
         with:
           package: .#btw-${{ matrix.exe }}
-          skip-on-cache-hit: 'true'
+          skip-on-cache-hit: "true"
 
   checks-build-image:
     runs-on: ubuntu-24.04
@@ -113,7 +115,7 @@ jobs:
         uses: ./.github/actions/cache
         with:
           package: .#btw-${{ matrix.image }}-image
-          skip-on-cache-hit: 'true'
+          skip-on-cache-hit: "true"
 
   deploy:
     runs-on: ubuntu-24.04
