@@ -24,11 +24,11 @@ inputs:
   skip-on-cache-hit:
     required: false
     description: Whether to skip remaining steps when a cache hit occurs
-    default: 'false'
+    default: "false"
   skip-on-cache-miss:
     required: false
     description: Whether to skip remaining steps when a cache miss occurs
-    default: 'false'
+    default: "false"
 
 runs:
   using: composite
@@ -44,14 +44,14 @@ runs:
       with:
         path: ${{ inputs.path }}
         key: ${{ steps.data.outputs.store-path }}
-    - name: 'Cache hit: custom command before restore'
+    - name: "Cache hit: custom command before restore"
       if: |
         steps.cache.outputs.cache-hit == 'true' &&
         inputs.before-cache-hit != '' &&
         inputs.skip-on-cache-hit != 'true'
       run: ${{ inputs.before-cache-hit }}
       shell: bash
-    - name: 'Cache hit: restore'
+    - name: "Cache hit: restore"
       if: |
         steps.cache.outputs.cache-hit == 'true' &&
         inputs.skip-on-cache-hit != 'true'
@@ -61,21 +61,21 @@ runs:
         --from file://${{ inputs.path }}
         -- ${{ steps.data.outputs.store-path }}
       shell: bash
-    - name: 'Cache hit: custom command after restore'
+    - name: "Cache hit: custom command after restore"
       if: |
         steps.cache.outputs.cache-hit == 'true' &&
         inputs.after-cache-hit != '' &&
         inputs.skip-on-cache-hit != 'true'
       run: ${{ inputs.after-cache-hit }}
       shell: bash
-    - name: 'Cache miss: custom command before save'
+    - name: "Cache miss: custom command before save"
       if: |
         steps.cache.outputs.cache-hit != 'true' &&
         inputs.before-cache-miss != '' &&
         inputs.skip-on-cache-miss != 'true'
       run: ${{ inputs.before-cache-miss }}
       shell: bash
-    - name: 'Cache miss: save'
+    - name: "Cache miss: save"
       if: |
         steps.cache.outputs.cache-hit != 'true' &&
         inputs.skip-on-cache-miss != 'true'
@@ -84,7 +84,7 @@ runs:
         --to file://${{ inputs.path }}?compression=zstd
         -- ${{ inputs.package }}
       shell: bash
-    - name: 'Cache miss: custom command after save'
+    - name: "Cache miss: custom command after save"
       if: |
         steps.cache.outputs.cache-hit != 'true' &&
         inputs.after-cache-miss != '' &&

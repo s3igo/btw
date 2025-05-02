@@ -22,23 +22,18 @@ extraArgs:
             enable = true;
             settings.formatting.array_auto_expand = false;
           };
-          yamlfmt = {
-            enable = true;
-            settings.formatter = {
-              type = "basic";
-              retain_line_breaks_single = true;
-              max_line_length = 80;
-              scan_folded_as_literal = true;
-              trim_trailing_whitespace = true;
-              eof_newline = true;
-            };
-          };
           actionlint.enable = true;
           dprint = {
             enable = true;
-            includes = [ "*.md" ];
+            includes = [
+              "*.md"
+              "*.yml"
+            ];
             settings.plugins = pkgs.dprint-plugins.getPluginList (
-              plugins: with plugins; [ dprint-plugin-markdown ]
+              plugins: with plugins; [
+                dprint-plugin-markdown
+                g-plane-pretty_yaml
+              ]
             );
           };
           typos.enable = true;
