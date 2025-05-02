@@ -33,9 +33,11 @@ jobs:
         run: |
           CHECKS="$(nix flake show --json \
             | jq --compact-output '.checks["${{ env.NIX_SYSTEM }}"] | keys')"
-          echo "checks=$CHECKS" >> "$GITHUB_OUTPUT"
-          echo 'exes=["native", "glibc", "musl"]' >> "$GITHUB_OUTPUT"
-          echo 'images=["glibc", "musl"]' >> "$GITHUB_OUTPUT"
+          {
+            echo "checks=$CHECKS"
+            echo 'exes=["native", "glibc", "musl"]'
+            echo 'images=["glibc", "musl"]'
+          } >> "$GITHUB_OUTPUT"
 
   pre-checks:
     runs-on: ubuntu-24.04

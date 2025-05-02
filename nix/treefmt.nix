@@ -33,6 +33,7 @@ extraArgs:
               eof_newline = true;
             };
           };
+          actionlint.enable = true;
           dprint = {
             enable = true;
             includes = [ "*.md" ];
